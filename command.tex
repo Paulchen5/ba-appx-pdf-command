@@ -82,7 +82,11 @@
     \ifthenelse{\value{pdfPageCounter} < \numexpr\@endpage + 1 \relax}{
         \loop
             \clearpage
-            \label{appendix:\@bapdflabel:page:\theappxPageCounter}
+            \ifdefempty{\@bapdflabel}{
+                \label{appendix:\@bapdftitle:page:\theappxPageCounter}
+            }{
+                \label{appendix:\@bapdflabel:page:\theappxPageCounter}
+            }
             \begin{minipage}{\textwidth}
                 \includepdf[%
                     pages=\thepdfPageCounter,
