@@ -1,0 +1,117 @@
+% custom command \baincludepdf
+\usepackage{xstring}
+
+\newcounter{appendixCounter}
+\newcounter{pdfPageCounter}
+\newcounter{appxPageCounter}
+\setcounter{appendixCounter}{0}
+\setcounter{pdfPageCounter}{0}
+\setcounter{appxPageCounter}{0}
+
+\makeatletter
+\define@key[BA]{pdf}{pages}[]{\def\@bapdfpages{#1}}
+\define@key[BA]{pdf}{label}[]{\def\@bapdflabel{#1}}
+\define@key[BA]{pdf}{source}[]{\def\@bapdfsource{#1}}
+\presetkeys[BA]{pdf}{pages=1,source}{}
+
+\newcommand{\@bapdfcaption}{%
+    \ifdefempty{\@bapdfsource}{%
+        \@bapdftitle\space(Quelle: eigene Darstellung)%
+    }{%
+        \@bapdftitle\space(Quelle: \@bapdfsource)%
+    }%
+}
+
+
+% \baincludepdf[pages=3,source=my source,label=label]{x.pdf}{MY CAPTION}
+\newcommand{\baincludepdf}[3][]{%
+    \setkeys[BA]{pdf}{#1}
+    \csdef{@bapdffilepath}{#2}
+    \csdef{@basource}{\@bapdfsource}
+    \csdef{@bapdftitle}{#3}
+    \addtoappx{\@bapdftitle}
+    \setcounter{appendixCounter}{\theappx}
+
+    \IfSubStr{\@bapdfpages}{-}
+    { 
+        \StrBefore{\@bapdfpages}{-}[\@startpage]%
+        \StrBehind{\@bapdfpages}{-}[\@endpage]%
+    } 
+    { 
+        \edef\@startpage{\@bapdfpages}%
+        \edef\@endpage{\@bapdfpages}%
+    }
+    \setcounter{pdfPageCounter}{\numexpr\@startpage}
+    \setcounter{appxPageCounter}{\numexpr\@startpage}
+
+    % check toggle for first page
+    \ifthenelse{\theappx > 1}{
+        % do nothing
+    }{
+        \clearpage
+        \ifdefempty{\@bapdflabel}{
+            \label{appendix:\@bapdftitle:page:\theappxPageCounter}
+        }{
+            \label{appendix:\@bapdflabel:page:\theappxPageCounter}
+        }
+
+        \begin{minipage}{\textwidth}% use minipage to not start on a new page
+            \includepdf[%
+                pages=\@startpage,
+                pagecommand={%
+                    \hspace*{\fill} Anhang \theappendixCounter\\
+                    \hspace*{\fill} Blatt \theappxPageCounter%
+                },
+                frame,
+                scale=0.75
+            ]{\@bapdffilepath}%
+        \end{minipage}%
+        \ifthenelse{\numexpr\@startpage == \numexpr\@endpage}{
+            \begin{center}
+                \begin{minipage}{0.75\textwidth}
+                    \@bapdfcaption
+                \end{minipage}
+            \end{center}
+        }{
+            % do nothing
+        }
+        \stepcounter{pdfPageCounter}
+        \stepcounter{appxPageCounter}
+    }
+
+    \ifthenelse{\value{pdfPageCounter} < \numexpr\@endpage + 1 \relax}{
+        \loop
+            \clearpage
+            \label{appendix:\@bapdflabel:page:\theappxPageCounter}
+            \begin{minipage}{\textwidth}
+                \includepdf[%
+                    pages=\thepdfPageCounter,
+                    pagecommand={%
+                        \hspace*{\fill} Anhang \theappendixCounter\\
+                        \hspace*{\fill} Blatt \theappxPageCounter%
+                    },
+                    frame,
+                    scale=0.75
+                ]{\@bapdffilepath}
+            \end{minipage}
+            \ifthenelse{\value{pdfPageCounter} = \numexpr\@endpage \relax}{
+                \begin{center}
+                    \vspace{35\baselineskip}
+                    \small
+                    \@bapdfcaption
+                \end{center}
+            }{
+                % do nothing
+            }
+        \ifnum \value{pdfPageCounter} < \numexpr\@endpage \relax
+        \stepcounter{pdfPageCounter}%
+        \stepcounter{appxPageCounter}%
+        \repeat
+    }{
+        % do nothing
+    }
+    \csundef{@bapdffilepath}
+    \csundef{@basource}
+    \csundef{@bapdftitle}
+}%
+\makeatother
